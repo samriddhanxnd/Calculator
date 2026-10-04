@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Calculator Studio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        glassDark: 'rgba(15, 23, 42, 0.75)',
+                        glassLight: 'rgba(255, 255, 255, 0.85)',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+        }
+        .display-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbar for history */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 9999px;
+        }
+        /* Glass effect */
+        .glass-panel-dark {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-panel-light {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        .calculator-shadow {
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 text-slate-100 min-h-screen flex items-center justify-center p-4 transition-colors duration-300">
+
+    <!-- Main Container -->
+    <div class="w-full max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Calculator Box -->
+        <div id="calcPanel" class="lg:col-span-2 rounded-3xl glass-panel-dark calculator-shadow p-6 flex flex-col justify-between transition-all duration-300 relative overflow-hidden">
+            
+            <!-- Top Bar: Mode, Theme, History Toggle -->
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-700/50 dark:border-slate-800">
+                <div class="flex items-center space-x-2">
+                    <span class="inline-block w-3 h-3 rounded-full bg-rose-500"></span>
+                    <span class="inline-block w-3 h-3 rounded-full bg-amber-500"></span>
+                    <span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>
+                    <span class="ml-2 text-xs font-semibold tracking-widest text-slate-400 uppercase">CalcStudio v2.0</span>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <!-- Mode Toggle Button -->
+                    <button id="modeToggleBtn" onclick="toggleMode()" class="px-3 py-1.5 text-xs font-medium rounded-full bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/30 transition-all flex items-center space-x-1.5">
+                        <i class="fa-solid fa-flask"></i>
+                        <span id="modeToggleText">Scientific Mode</span>
+                    </button>
+                    
+                    <!-- Theme Toggle -->
+                    <button onclick="toggleTheme()" class="w-8 h-8 rounded-full bg-slate-800/60 hover:bg-slate-700/60 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-slate-700">
+                        <i id="themeIcon" class="fa-solid fa-sun text-sm"></i>
+                    </button>
+
+                    <!-- Mobile History Toggle -->
+                    <button onclick="toggleHistoryDrawer()" class="lg:hidden w-8 h-8 rounded-full bg-slate-800/60 hover:bg-slate-700/60 flex items-center justify-center text-slate-300 hover:text-white transition-all border border-slate-700">
+                        <i class="fa-solid fa-clock-rotate-left text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Display Screen -->
+            <div class="bg-slate-950/70 dark:bg-slate-900/90 rounded-2xl p-4 mb-5 border border-slate-800/80 shadow-inner flex flex-col justify-end min-h-[110px] relative">
+                <!-- History Preview / Expression -->
+                <div id="historyExpression" class="display-font text-slate-400 text-sm tracking-wider text-right h-6 overflow-x-auto whitespace-nowrap"></div>
+                <!-- Main Input/Output Screen -->
+                <div id="mainDisplay" class="display-font text-slate-100 text-3xl sm:text-4xl font-semibold tracking-tight text-right overflow-x-auto whitespace-nowrap mt-1">0</div>
+                <!-- Angle Unit Indicator (Deg/Rad) -->
+                <div class="absolute top-3 left-3 flex items-center space-x-2">
+                    <button id="angleUnitBtn" onclick="toggleAngleUnit()" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">DEG</button>
+                </div>
+            </div>
+
+            <!-- Keypads Container (Seamless Grid Layout with no gaps) -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                
+                <!-- Scientific Panel (Conditional) -->
+                <div id="scientificPanel" class="hidden md:grid grid-cols-2 md:grid-cols-1 gap-[1px] bg-slate-800/60 rounded-2xl overflow-hidden border border-slate-700/50 pr-0 md:mr-2">
+                    <button onclick="appendFunction('sin(')" class="sci-btn">sin</button>
+                    <button onclick="appendFunction('cos(')" class="sci-btn">cos</button>
+                    <button onclick="appendFunction('tan(')" class="sci-btn">tan</button>
+                    <button onclick="appendFunction('log(')" class="sci-btn">log</button>
+                    <button onclick="appendFunction('ln(')" class="sci-btn">ln</button>
+                    <button onclick="appendFunction('sqrt(')" class="sci-btn">√</button>
+                    <button onclick="appendOperator('^')" class="sci-btn">x^y</button>
+                    <button onclick="appendConstant('pi')" class="sci-btn">π</button>
+                    <button onclick="appendConstant('e')" class="sci-btn">e</button>
+                    <button onclick="appendFunction('fact(')" class="sci-btn">n!</button>
+                    <button onclick="appendValue('(')" class="sci-btn">(</button>
+                    <button onclick="appendValue(')')" class="sci-btn">)</button>
+                </div>
+
+                <!-- Standard Keypad -->
+                <div id="standardKeypad" class="grid grid-cols-4 gap-[1px] bg-slate-800/60 rounded-2xl overflow-hidden border border-slate-700/50 md:col-span-3">
+                    <!-- Row 1 -->
+                    <button onclick="clearAll()" class="calc-btn text-rose-400 bg-rose-500/10 hover:bg-rose-500/20">AC</button>
+                    <button onclick="deleteLast()" class="calc-btn text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"><i class="fa-solid fa-delete-left"></i></button>
+                    <button onclick="appendValue('%')" class="calc-btn text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20">%</button>
+                    <button onclick="appendOperator('/')" class="calc-btn text-blue-400 bg-blue-500/10 hover:bg-blue-500/20">÷</button>
+
+                    <!-- Row 2 -->
+                    <button onclick="appendValue('7')" class="calc-btn num-btn">7</button>
+                    <button onclick="appendValue('8')" class="calc-btn num-btn">8</button>
+                    <button onclick="appendValue('9')" class="calc-btn num-btn">9</button>
+                    <button onclick="appendOperator('*')" class="calc-btn text-blue-400 bg-blue-500/10 hover:bg-blue-500/20">×</button>
+
+                    <!-- Row 3 -->
+                    <button onclick="appendValue('4')" class="calc-btn num-btn">4</button>
+                    <button onclick="appendValue('5')" class="calc-btn num-btn">5</button>
+                    <button onclick="appendValue('6')" class="calc-btn num-btn">6</button>
+                    <button onclick="appendOperator('-')" class="calc-btn text-blue-400 bg-blue-500/10 hover:bg-blue-500/20">-</button>
+
+                    <!-- Row 4 -->
+                    <button onclick="appendValue('1')" class="calc-btn num-btn">1</button>
+                    <button onclick="appendValue('2')" class="calc-btn num-btn">2</button>
+                    <button onclick="appendValue('3')" class="calc-btn num-btn">3</button>
+                    <button onclick="appendOperator('+')" class="calc-btn text-blue-400 bg-blue-500/10 hover:bg-blue-500/20">+</button>
+
+                    <!-- Row 5 -->
+                    <button onclick="appendValue('0')" class="calc-btn num-btn col-span-2">0</button>
+                    <button onclick="appendDecimal('.')" class="calc-btn num-btn">.</button>
+                    <button onclick="calculate()" class="calc-btn bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold">=</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- History Drawer / Panel -->
+        <div id="historyPanel" class="rounded-3xl glass-panel-dark calculator-shadow p-5 flex flex-col h-[520px] lg:h-auto transition-all duration-300">
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-700/50">
+                <div class="flex items-center space-x-2 text-slate-200 font-semibold text-sm">
+                    <i class="fa-solid fa-clock-rotate-left text-blue-400"></i>
+                    <span>Calculation History</span>
+                </div>
+                <button onclick="clearHistory()" class="text-xs text-rose-400 hover:text-rose-300 transition flex items-center space-x-1 px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>Clear</span>
+                </button>
+            </div>
+
+            <!-- History List -->
+            <div id="historyList" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                <div class="text-center text-slate-500 text-xs py-12 flex flex-col items-center justify-center space-y-2">
+                    <i class="fa-regular fa-folder-open text-2xl text-slate-600"></i>
+                    <span>No calculations yet</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toast Notification for Errors -->
+    <div id="toast" class="fixed bottom-6 right-6 transform translate-y-20 opacity-0 transition-all duration-300 bg-rose-600 text-white text-sm px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2 z-50">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span id="toastMsg">Invalid Expression</span>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        let currentInput = "0";
+        let historyExpression = "";
+        let isScientificMode = false;
+        let angleUnit = "DEG"; // DEG or RAD
+        let history = JSON.parse(localStorage.getItem('calc_history')) || [];
+        let resetOnNextInput = false;
+
+        const mainDisplay = document.getElementById('mainDisplay');
+        const historyExprEl = document.getElementById('historyExpression');
+        const historyListEl = document.getElementById('historyList');
+        const scientificPanel = document.getElementById('scientificPanel');
+        const modeToggleText = document.getElementById('modeToggleText');
+        const angleUnitBtn = document.getElementById('angleUnitBtn');
+
+        // Initialize UI
+        renderHistory();
+
+        function updateDisplay() {
+            mainDisplay.textContent = currentInput;
+            historyExprEl.textContent = historyExpression;
+            mainDisplay.scrollLeft = mainDisplay.scrollWidth;
+        }
+
+        function appendValue(val) {
+            if (resetOnNextInput) {
+                currentInput = val;
+                resetOnNextInput = false;
+            } else {
+                if (currentInput === "0" && val !== ".") {
+                    currentInput = val;
+                } else {
+                    currentInput += val;
+                }
+            }
+            updateDisplay();
+        }
+
+        function appendOperator(op) {
+            resetOnNextInput = false;
+            const lastChar = currentInput.slice(-1);
+            if (['+', '-', '*', '/', '^'].includes(lastChar)) {
+                currentInput = currentInput.slice(0, -1) + op;
+            } else {
+                currentInput += op;
+            }
+            updateDisplay();
+        }
+
+        function appendDecimal(dot) {
+            if (resetOnNextInput) {
+                currentInput = "0.";
+                resetOnNextInput = false;
+                updateDisplay();
+                return;
+            }
+            const tokens = currentInput.split(/[\+\-\*\/\(\)\^]/);
+            const lastToken = tokens[tokens.length - 1];
+            if (!lastToken.includes('.')) {
+                currentInput += dot;
+                updateDisplay();
+            }
+        }
+
+        function appendFunction(func) {
+            if (resetOnNextInput) {
+                currentInput = func;
+                resetOnNextInput = false;
+            } else {
+                if (currentInput === "0") currentInput = func;
+                else currentInput += func;
+            }
+            updateDisplay();
+        }
+
+        function appendConstant(constName) {
+            const val = constName === 'pi' ? Math.PI : Math.E;
+            if (resetOnNextInput || currentInput === "0") {
+                currentInput = val.toString();
+                resetOnNextInput = false;
+            } else {
+                currentInput += val.toString();
+            }
+            updateDisplay();
+        }
+
+        function clearAll() {
+            currentInput = "0";
+            historyExpression = "";
+            resetOnNextInput = false;
+            updateDisplay();
+        }
+
+        function deleteLast() {
+            if (resetOnNextInput) {
+                clearAll();
+                return;
+            }
+            if (currentInput.length > 1) {
+                currentInput = currentInput.slice(0, -1);
+            } else {
+                currentInput = "0";
+            }
+            updateDisplay();
+        }
+
+        function toggleMode() {
+            isScientificMode = !isScientificMode;
+            if (isScientificMode) {
+                scientificPanel.classList.remove('hidden');
+                modeToggleText.textContent = "Standard Mode";
+            } else {
+                scientificPanel.classList.add('hidden');
+                modeToggleText.textContent = "Scientific Mode";
+            }
+        }
+
+        function toggleAngleUnit() {
+            angleUnit = angleUnit === "DEG" ? "RAD" : "DEG";
+            angleUnitBtn.textContent = angleUnit;
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('themeIcon');
+            const calcPanel = document.getElementById('calcPanel');
+            const historyPanel = document.getElementById('historyPanel');
+
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                themeIcon.className = "fa-solid fa-moon text-sm";
+                calcPanel.classList.remove('glass-panel-dark');
+                calcPanel.classList.add('glass-panel-light');
+                historyPanel.classList.remove('glass-panel-dark');
+                historyPanel.classList.add('glass-panel-light');
+            } else {
+                html.classList.add('dark');
+                themeIcon.className = "fa-solid fa-sun text-sm";
+                calcPanel.classList.remove('glass-panel-light');
+                calcPanel.classList.add('glass-panel-dark');
+                historyPanel.classList.remove('glass-panel-light');
+                historyPanel.classList.add('glass-panel-dark');
+            }
+        }
+
+        function toggleHistoryDrawer() {
+            const historyPanel = document.getElementById('historyPanel');
+            historyPanel.classList.toggle('hidden');
+        }
+
+        function factorial(n) {
+            if (n < 0) return NaN;
+            if (n === 0 || n === 1) return 1;
+            let res = 1;
+            for (let i = 2; i <= n; i++) res *= i;
+            return res;
+        }
+
+        function calculate() {
+            try {
+                historyExpression = currentInput;
+                let expr = currentInput;
+
+                expr = expr.replace(/([0-9.]+)%/g, '($1/100)');
+                expr = expr.replace(/\^/g, '**');
+
+                const toRad = (val) => angleUnit === "DEG" ? (val * Math.PI / 180) : val;
+                
+                expr = expr.replace(/sin\(([^)]+)\)/g, (match, p1) => `Math.sin(${toRad(eval(p1))})`);
+                expr = expr.replace(/cos\(([^)]+)\)/g, (match, p1) => `Math.cos(${toRad(eval(p1))})`);
+                expr = expr.replace(/tan\(([^)]+)\)/g, (match, p1) => `Math.tan(${toRad(eval(p1))})`);
+                
+                expr = expr.replace(/log\(([^)]+)\)/g, 'Math.log10($1)');
+                expr = expr.replace(/ln\(([^)]+)\)/g, 'Math.log($1)');
+                expr = expr.replace(/sqrt\(([^)]+)\)/g, 'Math.sqrt($1)');
+                expr = expr.replace(/fact\(([^)]+)\)/g, (match, p1) => factorial(eval(p1)));
+
+                let result = eval(expr);
+
+                if (!isFinite(result) || isNaN(result)) {
+                    throw new Error("Math Error");
+                }
+
+                result = parseFloat(result.toFixed(10)).toString();
+                addToHistory(historyExpression, result);
+
+                currentInput = result;
+                resetOnNextInput = true;
+                updateDisplay();
+            } catch (error) {
+                showToast(error.message || "Invalid Expression");
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function addToHistory(expr, res) {
+            const item = { expr, res, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) };
+            history.unshift(item);
+            if (history.length > 30) history.pop();
+            localStorage.setItem('calc_history', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            if (history.length === 0) {
+                historyListEl.innerHTML = `
+                    <div class="text-center text-slate-500 text-xs py-12 flex flex-col items-center justify-center space-y-2">
+                        <i class="fa-regular fa-folder-open text-2xl text-slate-600"></i>
+                        <span>No calculations yet</span>
+                    </div>
+                `;
+                return;
+            }
+
+            historyListEl.innerHTML = history.map((item, index) => `
+                <div onclick="loadHistoryItem('${item.res}')" class="p-3 rounded-xl bg-slate-800/40 hover:bg-slate-800/80 border border-slate-700/40 cursor-pointer transition group">
+                    <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                        <span>${item.time}</span>
+                        <i class="fa-solid fa-arrow-turn-down opacity-0 group-hover:opacity-100 transition text-blue-400"></i>
+                    </div>
+                    <div class="display-font text-xs text-slate-300 text-right truncate">${item.expr}</div>
+                    <div class="display-font text-base font-semibold text-slate-100 text-right mt-0.5">= ${item.res}</div>
+                </div>
+            `).join('');
+        }
+
+        function loadHistoryItem(res) {
+            currentInput = res;
+            resetOnNextInput = true;
+            updateDisplay();
+        }
+
+        function clearHistory() {
+            history = [];
+            localStorage.removeItem('calc_history');
+            renderHistory();
+        }
+
+        // Keyboard Support
+        window.addEventListener('keydown', (e) => {
+            if ((e.key >= '0' && e.key <= '9') || e.key === '.') {
+                appendValue(e.key);
+            } else if (['+', '-', '*', '/', '%', '(' , ')', '^'].includes(e.key)) {
+                appendOperator(e.key);
+            } else if (e.key === 'Enter' || e.key === '=') {
+                e.preventDefault();
+                calculate();
+            } else if (e.key === 'Backspace') {
+                deleteLast();
+            } else if (e.key === 'Escape') {
+                clearAll();
+            }
+        });
+    </script>
+
+    <!-- Seamless Button Styles -->
+    <style>
+        .calc-btn {
+            height: 56px;
+            font-size: 1.125rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.15s ease;
+            background: rgba(30, 41, 59, 0.6);
+        }
+        .calc-btn:hover {
+            background: rgba(51, 65, 85, 0.9);
+        }
+        .num-btn {
+            color: #e2e8f0;
+        }
+        .sci-btn {
+            height: 42px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.15s ease;
+            color: #93c5fd;
+            background: rgba(30, 41, 59, 0.4);
+        }
+        .sci-btn:hover {
+            background: rgba(59, 130, 246, 0.25);
+            color: #bfdbfe;
+        }
+    </style>
+</body>
+</html>
